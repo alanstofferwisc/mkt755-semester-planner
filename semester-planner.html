@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MKT 755 - Semester Planner</title>
+  <style>
+    :root {
+      --blue: #3B82F6; --blue-bg: #EFF6FF; --blue-border: #BFDBFE;
+      --orange: #F59E0B; --orange-bg: #FFFBEB; --orange-border: #FDE68A;
+      --green: #10B981; --green-bg: #ECFDF5; --green-border: #A7F3D0;
+      --purple: #8B5CF6; --purple-bg: #F5F3FF; --purple-border: #DDD6FE;
+      --teal: #0D9488; --teal-bg: #F0FDFA; --teal-border: #99F6E4;
+      --gray-50: #F9FAFB; --gray-100: #F3F4F6; --gray-200: #E5E7EB;
+      --gray-300: #D1D5DB; --gray-400: #9CA3AF; --gray-500: #6B7280;
+      --gray-600: #4B5563; --gray-700: #374151; --gray-800: #1F2937;
+      --danger: #EF4444; --danger-bg: #FEF2F2;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--gray-100); color: var(--gray-800); line-height: 1.4; }
+    #app { max-width: 1400px; margin: 0 auto; padding: 16px; }
+
+    .header { background: white; border-radius: 12px; padding: 16px 24px; margin-bottom: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; align-items: center;
+      justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+    .header-left h1 { font-size: 1.3rem; font-weight: 700; }
+    .header-left .subtitle { font-size: 0.8rem; color: var(--gray-500); margin-top: 2px; }
+    .header-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .btn { padding: 6px 14px; border-radius: 6px; border: 1px solid var(--gray-300);
+      background: white; color: var(--gray-700); font-size: 0.8rem; cursor: pointer;
+      display: inline-flex; align-items: center; gap: 5px; transition: all 0.15s; }
+    .btn:hover { background: var(--gray-50); border-color: var(--gray-400); }
+    .btn-primary { background: var(--blue); color: white; border-color: var(--blue); }
+    .btn-primary:hover { background: #2563EB; }
+    .btn-danger { color: var(--danger); border-color: #FECACA; }
+    .btn-danger:hover { background: var(--danger-bg); }
+
+    .legend { display: flex; gap: 12px; align-items: center; background: white;
+      border-radius: 12px; padding: 10px 20px; margin-bottom: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1); flex-wrap: wrap; }
+    .legend-title { font-size: 0.75rem; font-weight: 600; color: var(--gray-500);
+      text-transform: uppercase; letter-spacing: 0.5px; }
+    .legend-item { display: flex; align-items: center; gap: 5px; font-size: 0.76rem; color: var(--gray-600); }
+    .legend-dot { width: 10px; height: 10px; border-radius: 3px; }
+
+    .warning-banner { background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 10px;
+      padding: 10px 18px; margin-bottom: 12px; display: flex; align-items: center;
+      gap: 8px; font-size: 0.82rem; color: #92400E; }
+    .warning-banner.hidden { display: none; }
+
+    .calendar-scroll { overflow-x: auto; }
+    .calendar { display: grid; grid-template-columns: 48px repeat(7, 1fr);
+      gap: 1px; background: var(--gray-200); border-radius: 12px; overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1); min-width: 900px; }
+
+    .day-header { background: var(--gray-700); color: white; padding: 8px 4px;
+      text-align: center; font-size: 0.75rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.5px; }
+    .day-header.class-day { background: #1E40AF; }
+    .day-header.wk-header { font-size: 0.65rem; }
+
+    .week-num { background: var(--gray-50); display: flex; align-items: flex-start;
+      justify-content: center; padding-top: 8px; font-size: 0.65rem;
+      font-weight: 600; color: var(--gray-400); }
+    .week-num.spring-break-wk { background: repeating-linear-gradient(
+      -45deg, #FEF2F2, #FEF2F2 4px, #FEE2E2 4px, #FEE2E2 8px); }
+
+    .day-cell { background: white; min-height: 80px; padding: 4px;
+      display: flex; flex-direction: column; gap: 3px; position: relative;
+      transition: background 0.15s; }
+    .day-cell.class-day-col { background: #F8FAFF; }
+    .day-cell.weekend { background: var(--gray-50); }
+    .day-cell.spring-break { background: repeating-linear-gradient(
+      -45deg, #FEF2F2, #FEF2F2 5px, #FECACA22 5px, #FECACA22 10px); }
+    .day-cell.drag-over { background: #DBEAFE !important; outline: 2px solid var(--blue);
+      outline-offset: -2px; border-radius: 2px; }
+    .day-cell.drag-invalid { opacity: 0.4; }
+    .date-label { font-size: 0.7rem; color: var(--gray-400); padding: 2px 3px;
+      display: flex; justify-content: space-between; align-items: center; }
+    .date-label .month-name { font-weight: 600; color: var(--gray-500); }
+    .date-label .add-btn { opacity: 0; cursor: pointer; font-size: 0.8rem; color: var(--blue);
+      font-weight: 700; width: 16px; height: 16px; display: flex; align-items: center;
+      justify-content: center; border-radius: 50%; transition: all 0.15s; }
+    .day-cell:hover .date-label .add-btn { opacity: 0.6; }
+    .date-label .add-btn:hover { opacity: 1 !important; background: var(--blue); color: white; }
+
+    .item-card { padding: 3px 6px; border-radius: 4px; font-size: 0.68rem;
+      cursor: grab; border-left: 3px solid; transition: transform 0.1s, box-shadow 0.1s;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      user-select: none; -webkit-user-select: none; position: relative; }
+    .item-card:hover { transform: translateY(-1px); box-shadow: 0 2px 6px rgba(0,0,0,0.12); z-index: 1; }
+    .item-card:active { cursor: grabbing; }
+    .item-card.lecture { background: var(--blue-bg); border-left-color: var(--blue); color: #1E40AF; }
+    .item-card.quiz { background: var(--orange-bg); border-left-color: var(--orange); color: #92400E; }
+    .item-card.assignment { background: var(--green-bg); border-left-color: var(--green); color: #065F46; }
+    .item-card.discussion { background: var(--purple-bg); border-left-color: var(--purple); color: #5B21B6; }
+    .item-card.reading { background: var(--teal-bg); border-left-color: var(--teal); color: #115E59; }
+    .item-card.dragging { opacity: 0.25; }
+    .item-card.spring-break-conflict { outline: 2px dashed var(--danger); outline-offset: -1px; }
+    .item-card .card-icons { position: absolute; top: 1px; right: 3px; display: flex; gap: 2px; align-items: center; }
+    .item-card .cascade-icon, .item-card .dep-icon { font-size: 0.55rem; opacity: 0.45; }
+    .item-card .delete-btn { font-size: 0.7rem; color: var(--gray-400); cursor: pointer;
+      opacity: 0; transition: opacity 0.15s; padding: 0 2px; line-height: 1; }
+    .item-card:hover .delete-btn { opacity: 0.7; }
+    .item-card .delete-btn:hover { color: var(--danger) !important; opacity: 1 !important; }
+    .item-card.dep-highlight { box-shadow: 0 0 0 2px var(--blue) !important; transform: translateY(-1px); }
+    .item-card.just-moved { animation: pulse-highlight 1.8s ease; }
+    @keyframes pulse-highlight {
+      0% { box-shadow: 0 0 0 0 rgba(59,130,246,0.5); }
+      30% { box-shadow: 0 0 0 4px rgba(59,130,246,0.3); }
+      100% { box-shadow: none; } }
+
+    .drag-ghost { position: fixed; pointer-events: none; z-index: 10000;
+      opacity: 0.9; transform: rotate(2deg) scale(1.05);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.2); border-radius: 4px; max-width: 180px; }
+
+    .toast-container { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      z-index: 9000; display: flex; flex-direction: column; gap: 8px; align-items: center; }
+    .toast { background: var(--gray-800); color: white; padding: 10px 20px;
+      border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+      font-size: 0.82rem; display: flex; align-items: center; gap: 10px;
+      opacity: 0; transform: translateY(10px); transition: opacity 0.3s, transform 0.3s; }
+    .toast.visible { opacity: 1; transform: translateY(0); }
+    .toast .undo-link { color: #93C5FD; cursor: pointer; text-decoration: underline; font-weight: 500; }
+
+    .spring-break-label { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-12deg);
+      font-size: 0.6rem; font-weight: 700; color: #DC2626; opacity: 0.25;
+      text-transform: uppercase; letter-spacing: 1px; pointer-events: none; white-space: nowrap; }
+
+    .stats-bar { background: white; border-radius: 12px; padding: 10px 20px; margin-top: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; gap: 20px;
+      font-size: 0.78rem; color: var(--gray-500); flex-wrap: wrap; }
+    .stats-bar strong { color: var(--gray-700); }
+
+    .shortcuts-hint { font-size: 0.72rem; color: var(--gray-400); margin-top: 8px; text-align: center; }
+    kbd { background: var(--gray-100); border: 1px solid var(--gray-300);
+      border-radius: 3px; padding: 1px 5px; font-family: inherit; font-size: 0.7rem; }
+
+    /* Modal */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 8000;
+      display: none; align-items: center; justify-content: center; }
+    .modal-overlay.active { display: flex; }
+    .modal { background: white; border-radius: 12px; padding: 24px; width: 420px; max-width: 90vw;
+      box-shadow: 0 16px 48px rgba(0,0,0,0.2); }
+    .modal h2 { font-size: 1.1rem; margin-bottom: 16px; color: var(--gray-800); }
+    .modal label { display: block; font-size: 0.8rem; font-weight: 600; color: var(--gray-600);
+      margin-bottom: 4px; margin-top: 14px; }
+    .modal label:first-of-type { margin-top: 0; }
+    .modal input, .modal select { width: 100%; padding: 8px 12px; border: 1px solid var(--gray-300);
+      border-radius: 6px; font-size: 0.85rem; font-family: inherit; }
+    .modal input:focus, .modal select:focus { outline: none; border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(59,130,246,0.15); }
+    .modal .hint { font-size: 0.72rem; color: var(--gray-400); margin-top: 3px; }
+    .modal-buttons { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+    .modal .linked-section { transition: opacity 0.2s; }
+    .modal .linked-section.disabled { opacity: 0.35; pointer-events: none; }
+
+    @media (max-width: 1000px) {
+      #app { padding: 8px; }
+      .header { flex-direction: column; align-items: flex-start; }
+      .item-card { font-size: 0.62rem; padding: 2px 4px; }
+    }
+  </style>
+</head>
+<body>
+<div id="app"></div>
+<div class="toast-container" id="toast-container"></div>
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <h2 id="modal-title">Add New Item</h2>
+    <label>Name</label>
+    <input type="text" id="modal-name" placeholder="e.g. Lecture: Brand Strategy">
+    <label>Type</label>
+    <select id="modal-type">
+      <option value="lecture">Lecture</option>
+      <option value="assignment">Assignment</option>
+      <option value="quiz">Quiz</option>
+      <option value="reading">Reading</option>
+      <option value="discussion">Discussion</option>
+    </select>
+    <label>Date</label>
+    <input type="date" id="modal-date" min="2026-01-19" max="2026-05-03">
+    <div class="linked-section" id="modal-linked-section">
+      <label>Linked to Lecture <span style="font-weight:400;color:var(--gray-400)">(optional)</span></label>
+      <select id="modal-parent"></select>
+      <div class="hint">Linked items move automatically when their lecture is rescheduled</div>
+    </div>
+    <div class="modal-buttons">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="submitModal()">Add Item</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ======== CONFIGURATION ========
+const CONFIG = {
+  courseName: "MKT 755", semesterName: "Spring 2026",
+  firstWeekMonday: "2026-01-19", lastWeekSunday: "2026-05-03",
+  springBreakStart: "2026-03-30", springBreakEnd: "2026-04-05",
+  classDays: [1, 3],
+};
+
+// ======== DATA ========
+const INITIAL_ITEMS = [
+  // Week 1
+  { id: 1,  name: "Lecture 01: Course Introduction", type: "lecture", date: "2026-01-21" },
+  { id: 2,  name: "Quiz (Class Introduction)", type: "quiz", date: "2026-01-24" },
+  // Week 2
+  { id: 3,  name: "Lecture 02: STP and Personas", type: "lecture", date: "2026-01-26" },
+  { id: 4,  name: "Lecture 03: Digital Platforms", type: "lecture", date: "2026-01-28" },
+  { id: 101, name: "Reading: Uber, Etsy, Airbnb Case Study", type: "reading", date: "2026-01-28", parentId: 4 },
+  { id: 5,  name: "CNG Persona Analysis & Creation", type: "assignment", date: "2026-02-01", parentId: 3 },
+  { id: 6,  name: "Team Signup", type: "assignment", date: "2026-02-01", parentId: 3 },
+  { id: 7,  name: "Quiz #1", type: "quiz", date: "2026-02-01" },
+  // Week 3
+  { id: 8,  name: "Lecture 04: Positioning", type: "lecture", date: "2026-02-02" },
+  { id: 102, name: "Reading: Start with Why", type: "reading", date: "2026-02-02", parentId: 8 },
+  { id: 9,  name: "Lecture 05: Messaging", type: "lecture", date: "2026-02-04" },
+  { id: 103, name: "Reading: Copywriting Explained", type: "reading", date: "2026-02-04", parentId: 9 },
+  { id: 10, name: "Marketing Campaign Reflection Post", type: "discussion", date: "2026-02-07", parentId: 1 },
+  { id: 11, name: "Quiz #2", type: "quiz", date: "2026-02-08" },
+  { id: 12, name: "Messaging Hierarchy Assignment", type: "assignment", date: "2026-02-08", parentId: 8 },
+  // Week 4
+  { id: 13, name: "Customer Journey Map Assignment", type: "assignment", date: "2026-02-09", parentId: 14 },
+  { id: 14, name: "Lecture 06: Customer Journey", type: "lecture", date: "2026-02-09" },
+  { id: 104, name: "Reading: Zero Moment of Truth", type: "reading", date: "2026-02-09", parentId: 14 },
+  { id: 15, name: "Lecture 07: ICP, TAM, & ABM", type: "lecture", date: "2026-02-11" },
+  { id: 16, name: "Quiz #3", type: "quiz", date: "2026-02-15" },
+  { id: 17, name: "Total Addressable Market Analysis", type: "assignment", date: "2026-02-15", parentId: 15 },
+  // Week 5
+  { id: 18, name: "Lecture: Lead Management & Sales Enablement", type: "lecture", date: "2026-02-16" },
+  { id: 19, name: "Lecture: Client Presentation", type: "lecture", date: "2026-02-18" },
+  { id: 105, name: "Reading: Stabicraft Marketing Brief", type: "reading", date: "2026-02-18", parentId: 19 },
+  { id: 20, name: "Client Questions - CNG", type: "assignment", date: "2026-02-22", parentId: 19 },
+  { id: 21, name: "Quiz #4", type: "quiz", date: "2026-02-22" },
+  // Week 6
+  { id: 22, name: "Case Study: Hubspot and AI", type: "lecture", date: "2026-02-23" },
+  { id: 106, name: "Reading: Hubspot Case", type: "reading", date: "2026-02-23", parentId: 22 },
+  { id: 23, name: "Lecture: Content Marketing & Websites", type: "lecture", date: "2026-02-25" },
+  { id: 24, name: "Speaker Questions - Powsner & Lecinski", type: "assignment", date: "2026-02-25" },
+  { id: 107, name: "Reading: Join or Die Ch. 5", type: "reading", date: "2026-02-25", parentId: 23 },
+  { id: 25, name: "Quiz #5", type: "quiz", date: "2026-03-01" },
+  // Week 7
+  { id: 26, name: "Lecture: SEO", type: "lecture", date: "2026-03-02" },
+  { id: 27, name: "Participation", type: "assignment", date: "2026-03-02" },
+  { id: 109, name: "Reading: Join or Die Ch. 7", type: "reading", date: "2026-03-02", parentId: 26 },
+  { id: 28, name: "Lecture: Zero Moment of Truth - Powsner", type: "lecture", date: "2026-03-04" },
+  { id: 29, name: "Create a Landing Page", type: "assignment", date: "2026-03-08", parentId: 23 },
+  // Week 8
+  { id: 30, name: "Lecture: Email & Direct Mail", type: "lecture", date: "2026-03-09" },
+  { id: 31, name: "Lecture: PPC", type: "lecture", date: "2026-03-11" },
+  { id: 108, name: "Reading: Join or Die Ch. 6", type: "reading", date: "2026-03-11", parentId: 31 },
+  { id: 32, name: "Digital Ads Simulation: Round 1", type: "assignment", date: "2026-03-15", parentId: 31, ppcLectureOffset: 1 },
+  { id: 33, name: "Quiz #6 PPC", type: "quiz", date: "2026-03-15" },
+  { id: 34, name: "Quiz (SEO & Join or Die Ch. 5)", type: "quiz", date: "2026-03-15" },
+  // Week 9
+  { id: 200, name: "PPC 2", type: "lecture", date: "2026-03-16" },
+  { id: 36, name: "Digital Ads Simulation: Round 2", type: "assignment", date: "2026-03-17", parentId: 31, ppcLectureOffset: 2 },
+  { id: 35, name: "Lecture: Display Ads", type: "lecture", date: "2026-03-18" },
+  { id: 38, name: "Quiz (Social Media)", type: "quiz", date: "2026-03-22" },
+  { id: 39, name: "Hubspot Email Campaigns", type: "assignment", date: "2026-03-22", parentId: 30 },
+  // Week 10
+  { id: 43, name: "Class Project Mid-point Reviews (1)", type: "assignment", date: "2026-03-23" },
+  { id: 44, name: "Class Project Mid-point Review (2)", type: "assignment", date: "2026-03-25" },
+  { id: 201, name: "Colony Brands: Omnichannel Strategy", type: "discussion", date: "2026-03-25" },
+  { id: 42, name: "Quiz #8 (Social Media & Influencer)", type: "quiz", date: "2026-03-29" },
+  // Week 11 - Spring Break (Mar 30 - Apr 5)
+  { id: 40, name: "Digital Ads Simulation: Rounds 3 & 4", type: "assignment", date: "2026-04-05", parentId: 31, ppcLectureOffset: 3 },
+  // Week 12
+  { id: 37, name: "Lecture: Social Media", type: "lecture", date: "2026-04-06" },
+  { id: 202, name: "MSP Event", type: "discussion", date: "2026-04-07" },
+  { id: 203, name: "Colony Brands: Email & SMS", type: "discussion", date: "2026-04-08" },
+  { id: 204, name: "Group Work Day", type: "assignment", date: "2026-04-08" },
+  { id: 45, name: "SEM Results Analysis", type: "assignment", date: "2026-04-12" },
+  // Week 13
+  { id: 47, name: "Guest Lecture: Influencer Marketing - Doering", type: "lecture", date: "2026-04-13" },
+  { id: 41, name: "Digital Ads Simulation: Rounds 5 & 6", type: "assignment", date: "2026-04-14", parentId: 31, ppcLectureOffset: 5 },
+  { id: 48, name: "Lecture: Analytics & KPIs", type: "lecture", date: "2026-04-15" },
+  { id: 110, name: "Reading: Join or Die Ch. 8", type: "reading", date: "2026-04-15", parentId: 48 },
+  { id: 205, name: "Colony Brands: Search and PPC", type: "discussion", date: "2026-04-15" },
+  // Week 14
+  { id: 49, name: "Lecture: Campaign Planning & Forecasting", type: "lecture", date: "2026-04-20" },
+  { id: 50, name: "Lead Gen Model Assignment", type: "assignment", date: "2026-04-21", parentId: 48 },
+  { id: 51, name: "Lecture: Privacy & Data", type: "lecture", date: "2026-04-22" },
+  { id: 206, name: "Colony Brands: Video", type: "discussion", date: "2026-04-22" },
+  { id: 52, name: "Quiz #9 Analytics, Data, & Privacy", type: "quiz", date: "2026-04-26" },
+  // Week 15
+  { id: 53, name: "Final Presentation (Submit Here)", type: "assignment", date: "2026-04-27" },
+  { id: 54, name: "Project Presentations 1", type: "assignment", date: "2026-04-27" },
+  { id: 55, name: "Project Presentations 2", type: "assignment", date: "2026-04-29" },
+];
+
+const INITIAL_LECTURE_ORDER = [1, 3, 4, 8, 9, 14, 15, 18, 19, 22, 23, 26, 28, 30, 31, 200, 35, 37, 47, 48, 49, 51];
+
+// ======== STATE ========
+let state = { items: [], lectureOrder: [], history: [], nextId: 200 };
+
+// ======== UTILITIES ========
+function parseDate(s) { const [y,m,d] = s.split('-').map(Number); return new Date(y,m-1,d); }
+function formatDate(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+function isSpringBreak(ds) { return ds >= CONFIG.springBreakStart && ds <= CONFIG.springBreakEnd; }
+function isClassDay(d) { return CONFIG.classDays.includes(d.getDay()); }
+function isWeekend(d) { const x = d.getDay(); return x===0||x===6; }
+function deepClone(o) { return JSON.parse(JSON.stringify(o)); }
+function truncate(s,n) { return s.length > n ? s.slice(0,n)+'...' : s; }
+const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const DAY_NAMES = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+
+function daysBetween(a, b) {
+  return Math.round((parseDate(b) - parseDate(a)) / 86400000);
+}
+function addDays(dateStr, n) {
+  const d = parseDate(dateStr); d.setDate(d.getDate() + n); return formatDate(d);
+}
+function getNextClassDay(dateStr) {
+  let d = parseDate(dateStr); d.setDate(d.getDate()+1);
+  for (let i=0;i<200;i++) { if (isClassDay(d) && !isSpringBreak(formatDate(d))) return formatDate(d); d.setDate(d.getDate()+1); }
+  return null;
+}
+function getWeeks() {
+  const weeks = []; let d = parseDate(CONFIG.firstWeekMonday); const end = parseDate(CONFIG.lastWeekSunday);
+  while (d <= end) { const w=[]; for(let i=0;i<7;i++){w.push(new Date(d));d.setDate(d.getDate()+1);} weeks.push(w); }
+  return weeks;
+}
+
+// ======== PERSISTENCE ========
+const STORAGE_KEY = 'mkt755_planner_v4';
+function saveState() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ items: state.items, lectureOrder: state.lectureOrder, nextId: state.nextId })); } catch(e){}
+}
+function loadState() {
+  try {
+    const s = localStorage.getItem(STORAGE_KEY);
+    if (s) { const d = JSON.parse(s); if (d.items && d.lectureOrder) return d; }
+  } catch(e){}
+  return null;
+}
+
+// ======== SNAPSHOT / UNDO ========
+function saveSnapshot() {
+  state.history.push({ items: deepClone(state.items), lectureOrder: [...state.lectureOrder], nextId: state.nextId });
+  if (state.history.length > 50) state.history.shift();
+}
+function undo() {
+  if (!state.history.length) return;
+  const snap = state.history.pop();
+  state.items = snap.items; state.lectureOrder = snap.lectureOrder; state.nextId = snap.nextId;
+  saveState(); render(); showToast('Undone');
+}
+function resetAll() {
+  state.items = deepClone(INITIAL_ITEMS); state.lectureOrder = [...INITIAL_LECTURE_ORDER];
+  state.nextId = 200; state.history = []; saveState(); render();
+  showToast('Reset to original schedule');
+}
+
+// ======== PPC DEPENDENTS ========
+function recalcPpcDependents(movedIds) {
+  state.items.filter(i => i.ppcLectureOffset).forEach(dep => {
+    const ppcIdx = state.lectureOrder.indexOf(dep.parentId);
+    if (ppcIdx < 0) return;
+    const targetIdx = ppcIdx + dep.ppcLectureOffset;
+    if (targetIdx < state.lectureOrder.length) {
+      const targetLect = state.items.find(i => i.id === state.lectureOrder[targetIdx]);
+      if (targetLect) {
+        const newDate = addDays(targetLect.date, -1);
+        if (dep.date !== newDate) { dep.date = newDate; if (movedIds) movedIds.push(dep.id); }
+      }
+    }
+  });
+}
+
+// ======== CASCADE LOGIC ========
+function cascadeLectures(fromIdx) {
+  const movedIds = [];
+  let lastDate = state.items.find(i => i.id === state.lectureOrder[fromIdx]).date;
+  for (let i = fromIdx + 1; i < state.lectureOrder.length; i++) {
+    const lect = state.items.find(it => it.id === state.lectureOrder[i]);
+    if (!lect) continue;
+    const nextDate = getNextClassDay(lastDate);
+    if (nextDate && lect.date !== nextDate) {
+      const shift = daysBetween(lect.date, nextDate);
+      const oldDate = lect.date;
+      lect.date = nextDate;
+      movedIds.push(lect.id);
+      // Shift non-PPC dependents of this lecture
+      state.items.filter(d => d.parentId === lect.id && !d.ppcLectureOffset).forEach(d => {
+        d.date = addDays(d.date, shift);
+        movedIds.push(d.id);
+      });
+    }
+    lastDate = lect.date;
+  }
+  recalcPpcDependents(movedIds);
+  return movedIds;
+}
+
+// ======== MOVE ITEM ========
+function moveItem(itemId, newDate) {
+  saveSnapshot();
+  const item = state.items.find(i => i.id === itemId);
+  const oldDate = item.date;
+  let movedIds = [itemId];
+
+  if (item.type === 'lecture' || state.lectureOrder.includes(itemId)) {
+    const lectIdx = state.lectureOrder.indexOf(itemId);
+    if (lectIdx >= 0) {
+      // Validate order
+      if (lectIdx > 0) {
+        const prev = state.items.find(i => i.id === state.lectureOrder[lectIdx - 1]);
+        if (prev && newDate <= prev.date) { state.history.pop(); showToast('Cannot place before the previous lecture in sequence','error'); return []; }
+      }
+      item.date = newDate;
+      // Shift non-PPC dependents of THIS lecture
+      const shift = daysBetween(oldDate, newDate);
+      state.items.filter(d => d.parentId === itemId && !d.ppcLectureOffset).forEach(d => {
+        d.date = addDays(d.date, shift); movedIds.push(d.id);
+      });
+      const cascaded = cascadeLectures(lectIdx);
+      movedIds = movedIds.concat(cascaded);
+    } else {
+      item.date = newDate;
+    }
+  } else {
+    item.date = newDate;
+    // If this item has dependents (unlikely for non-lecture, but support it)
+    const shift = daysBetween(oldDate, newDate);
+    state.items.filter(d => d.parentId === itemId).forEach(d => {
+      d.date = addDays(d.date, shift); movedIds.push(d.id);
+    });
+  }
+
+  saveState();
+  const cascadedCount = movedIds.length - 1;
+  if (cascadedCount > 0) {
+    showToast(`Moved to ${formatDateDisplay(newDate)}. ${cascadedCount} item${cascadedCount>1?'s':''} shifted.`, 'info', true);
+  }
+  return movedIds;
+}
+
+function formatDateDisplay(ds) { const d = parseDate(ds); return `${MONTH_NAMES[d.getMonth()]} ${d.getDate()}`; }
+
+// ======== ADD / DELETE ========
+function addItem(name, type, date, parentId) {
+  saveSnapshot();
+  const id = state.nextId++;
+  const item = { id, name, type, date };
+  if (parentId) item.parentId = parentId;
+  state.items.push(item);
+
+  if (type === 'lecture') {
+    // Insert into lectureOrder at correct position
+    let insertIdx = state.lectureOrder.length;
+    for (let i = 0; i < state.lectureOrder.length; i++) {
+      const lect = state.items.find(it => it.id === state.lectureOrder[i]);
+      if (lect && lect.date > date) { insertIdx = i; break; }
+    }
+    state.lectureOrder.splice(insertIdx, 0, id);
+    // Cascade from insertion point
+    const cascaded = cascadeLectures(insertIdx);
+    saveState(); render();
+    showToast(`Added lecture. ${cascaded.length ? cascaded.length + ' items shifted.' : ''}`, 'info', cascaded.length > 0);
+  } else {
+    saveState(); render();
+    showToast(`Added "${truncate(name, 30)}"`);
+  }
+}
+
+function deleteItem(itemId) {
+  saveSnapshot();
+  const item = state.items.find(i => i.id === itemId);
+  if (!item) return;
+
+  // Unlink dependents
+  state.items.filter(i => i.parentId === itemId).forEach(i => { delete i.parentId; delete i.ppcLectureOffset; });
+
+  // Remove from lecture order
+  const lectIdx = state.lectureOrder.indexOf(itemId);
+  if (lectIdx >= 0) state.lectureOrder.splice(lectIdx, 1);
+
+  // Remove item
+  state.items = state.items.filter(i => i.id !== itemId);
+  saveState(); render();
+  showToast(`Removed "${truncate(item.name, 30)}"`, 'info', true);
+}
+
+// ======== MODAL ========
+let modalPreDate = null;
+function openModal(preDate) {
+  modalPreDate = preDate || null;
+  document.getElementById('modal-name').value = '';
+  document.getElementById('modal-type').value = 'assignment';
+  document.getElementById('modal-date').value = preDate || '';
+  updateModalParentOptions();
+  updateModalLinkedVisibility();
+  document.getElementById('modal-overlay').classList.add('active');
+  document.getElementById('modal-name').focus();
+}
+function closeModal() { document.getElementById('modal-overlay').classList.remove('active'); }
+
+function updateModalParentOptions() {
+  const sel = document.getElementById('modal-parent');
+  sel.innerHTML = '<option value="">None (independent)</option>';
+  state.lectureOrder.forEach(lid => {
+    const l = state.items.find(i => i.id === lid);
+    if (l) sel.innerHTML += `<option value="${lid}">${truncate(l.name, 40)}</option>`;
+  });
+}
+function updateModalLinkedVisibility() {
+  const t = document.getElementById('modal-type').value;
+  document.getElementById('modal-linked-section').className = 'linked-section' + (t === 'lecture' ? ' disabled' : '');
+}
+document.getElementById('modal-type').addEventListener('change', updateModalLinkedVisibility);
+
+function submitModal() {
+  const name = document.getElementById('modal-name').value.trim();
+  const type = document.getElementById('modal-type').value;
+  const date = document.getElementById('modal-date').value;
+  const parentId = type !== 'lecture' ? (parseInt(document.getElementById('modal-parent').value) || null) : null;
+
+  if (!name) { showToast('Please enter a name', 'error'); return; }
+  if (!date) { showToast('Please select a date', 'error'); return; }
+  if (type === 'lecture') {
+    const d = parseDate(date);
+    if (!isClassDay(d)) { showToast('Lectures must be on Monday or Wednesday', 'error'); return; }
+    if (isSpringBreak(date)) { showToast('Cannot schedule during Spring Break', 'error'); return; }
+  }
+  addItem(name, type, date, parentId);
+  closeModal();
+}
+
+// Close modal on overlay click or Escape
+document.getElementById('modal-overlay').addEventListener('click', (e) => {
+  if (e.target === document.getElementById('modal-overlay')) closeModal();
+});
+
+// ======== TOAST ========
+function showToast(msg, type='info', showUndo=false) {
+  const c = document.getElementById('toast-container');
+  const t = document.createElement('div'); t.className = 'toast';
+  t.innerHTML = msg + (showUndo ? ' <span class="undo-link" onclick="undo()">Undo</span>' : '');
+  if (type === 'error') t.style.background = '#DC2626';
+  c.appendChild(t);
+  requestAnimationFrame(() => t.classList.add('visible'));
+  setTimeout(() => { t.classList.remove('visible'); setTimeout(() => t.remove(), 300); }, 3500);
+}
+
+// ======== RENDERING ========
+function render() {
+  const app = document.getElementById('app');
+  const weeks = getWeeks();
+  const springBreakItems = state.items.filter(i => isSpringBreak(i.date));
+  const lectCount = state.items.filter(i => i.type==='lecture').length;
+  const readCount = state.items.filter(i => i.type==='reading').length;
+
+  let html = `<div class="header">
+    <div class="header-left"><h1>${CONFIG.courseName} Semester Planner</h1>
+      <div class="subtitle">${CONFIG.semesterName} &middot; ${state.lectureOrder.length} Lectures &middot; ${state.items.length} Total Items</div></div>
+    <div class="header-right">
+      <button class="btn btn-primary" onclick="openModal()">+ Add Item</button>
+      <button class="btn" onclick="undo()" title="Ctrl+Z">Undo</button>
+      <button class="btn btn-danger" onclick="if(confirm('Reset to original schedule?'))resetAll()">Reset</button>
+      <button class="btn" onclick="exportSchedule()">Export CSV</button>
+    </div></div>`;
+
+  html += `<div class="legend">
+    <span class="legend-title">Legend:</span>
+    <span class="legend-item"><span class="legend-dot" style="background:var(--blue)"></span>Lecture</span>
+    <span class="legend-item"><span class="legend-dot" style="background:var(--orange)"></span>Quiz</span>
+    <span class="legend-item"><span class="legend-dot" style="background:var(--green)"></span>Assignment</span>
+    <span class="legend-item"><span class="legend-dot" style="background:var(--teal)"></span>Reading</span>
+    <span class="legend-item"><span class="legend-dot" style="background:var(--purple)"></span>Discussion</span>
+    <span class="legend-item" style="margin-left:auto;font-size:0.7rem;color:var(--gray-400)">
+      <span style="opacity:0.6">&#128279;</span> = linked to lecture &nbsp;
+      <span style="opacity:0.6">&#8644;</span> = auto-cascades
+    </span></div>`;
+
+  html += `<div class="warning-banner ${springBreakItems.length===0?'hidden':''}">
+    <span style="font-size:1.1rem">&#9888;</span>
+    <span><strong>${springBreakItems.length} item${springBreakItems.length!==1?'s':''}</strong> scheduled during Spring Break (Mar 30 - Apr 5). Drag them to reschedule.</span></div>`;
+
+  html += `<div class="calendar-scroll"><div class="calendar" id="calendar">`;
+  html += `<div class="day-header wk-header">WK</div>`;
+  for (let i=0;i<7;i++) {
+    const di=(i+1)%7; html += `<div class="day-header ${CONFIG.classDays.includes(di)?'class-day':''}">${DAY_NAMES[i]}</div>`;
+  }
+
+  weeks.forEach((week, wi) => {
+    const isBreakWeek = week.some(d => isSpringBreak(formatDate(d)));
+    html += `<div class="week-num ${isBreakWeek?'spring-break-wk':''}">${wi+1}</div>`;
+    week.forEach((day, di) => {
+      const ds = formatDate(day);
+      const dayItems = state.items.filter(i => i.date === ds);
+      const isBreak = isSpringBreak(ds);
+      const isCls = isClassDay(day);
+      const isWk = isWeekend(day);
+      let cc = 'day-cell';
+      if (isBreak) cc += ' spring-break'; else if (isCls) cc += ' class-day-col'; else if (isWk) cc += ' weekend';
+
+      html += `<div class="${cc}" data-date="${ds}">`;
+      const mp = (day.getDate()===1||(wi===0&&di===0)) ? `<span class="month-name">${MONTH_NAMES[day.getMonth()]}</span> ` : '';
+      html += `<div class="date-label">${mp}${day.getDate()}<span class="add-btn" data-add-date="${ds}" title="Add item on ${MONTH_NAMES[day.getMonth()]} ${day.getDate()}">+</span></div>`;
+      if (isBreak && day.getDay()===3) html += `<div class="spring-break-label">Spring Break</div>`;
+
+      // Sort: lectures first, then readings, then assignments, then quizzes
+      const typeOrder = { lecture:0, reading:1, assignment:2, discussion:3, quiz:4 };
+      dayItems.sort((a,b) => (typeOrder[a.type]||9) - (typeOrder[b.type]||9));
+
+      dayItems.forEach(item => {
+        const conflict = isBreak ? ' spring-break-conflict' : '';
+        const isLect = state.lectureOrder.includes(item.id);
+        const hasDeps = state.items.some(d => d.parentId === item.id);
+        const isDep = item.parentId != null;
+        const parentName = isDep ? (state.items.find(p => p.id === item.parentId)?.name || '') : '';
+        const title = item.name + (isDep ? `\n↳ Linked to: ${parentName}` : '') + (item.ppcLectureOffset ? `\n(auto: day before lecture +${item.ppcLectureOffset})` : '');
+
+        let icons = '';
+        if (isDep) icons += `<span class="dep-icon" title="Linked to: ${parentName}">&#128279;</span>`;
+        if (isLect) icons += `<span class="cascade-icon" title="Auto-cascades subsequent lectures">&#8644;</span>`;
+        icons += `<span class="delete-btn" data-del-id="${item.id}" title="Remove">&#215;</span>`;
+
+        html += `<div class="item-card ${item.type}${conflict}" data-id="${item.id}" data-parent="${item.parentId||''}" title="${title.replace(/"/g,'&quot;')}">
+          ${truncate(item.name, 30)}<span class="card-icons">${icons}</span></div>`;
+      });
+      html += `</div>`;
+    });
+  });
+
+  html += `</div></div>`;
+
+  const qc = state.items.filter(i=>i.type==='quiz').length;
+  const ac = state.items.filter(i=>i.type==='assignment').length;
+  const dc = state.items.filter(i=>i.type==='discussion').length;
+  html += `<div class="stats-bar">
+    <span><strong>${lectCount}</strong> Lectures</span><span><strong>${qc}</strong> Quizzes</span>
+    <span><strong>${ac}</strong> Assignments</span><span><strong>${readCount}</strong> Readings</span>
+    <span><strong>${dc}</strong> Discussions</span>
+    <span style="margin-left:auto"><strong>${weeks.length}</strong> Weeks</span></div>`;
+  html += `<div class="shortcuts-hint"><kbd>Ctrl</kbd>+<kbd>Z</kbd> Undo &middot; Drag lectures → auto-cascade + dependents follow &middot; <span style="opacity:0.5">&#128279;</span> linked items move with their lecture &middot; Click <strong>+</strong> on any day to add</div>`;
+  app.innerHTML = html;
+}
+
+// ======== DRAG AND DROP ========
+let dragState_dd = null, lastHighlighted = null;
+
+document.addEventListener('pointerdown', (e) => {
+  // Delete button click
+  const delBtn = e.target.closest('.delete-btn');
+  if (delBtn) { e.preventDefault(); e.stopPropagation();
+    const id = parseInt(delBtn.dataset.delId);
+    const item = state.items.find(i => i.id === id);
+    if (item && confirm(`Remove "${item.name}"?`)) deleteItem(id);
+    return;
+  }
+  // Add button click
+  const addBtn = e.target.closest('.add-btn');
+  if (addBtn) { e.preventDefault(); openModal(addBtn.dataset.addDate); return; }
+
+  const card = e.target.closest('.item-card');
+  if (!card || e.button !== 0) return;
+  e.preventDefault();
+  const itemId = parseInt(card.dataset.id);
+  const item = state.items.find(i => i.id === itemId);
+  const rect = card.getBoundingClientRect();
+  const ghost = card.cloneNode(true);
+  ghost.className = 'item-card ' + item.type + ' drag-ghost';
+  ghost.style.width = Math.min(rect.width, 180) + 'px';
+  // Remove icons from ghost
+  const iconsEl = ghost.querySelector('.card-icons');
+  if (iconsEl) iconsEl.remove();
+  document.body.appendChild(ghost);
+  dragState_dd = { itemId, item, ghost, offsetX: e.clientX-rect.left, offsetY: e.clientY-rect.top,
+    startX: e.clientX, startY: e.clientY, isDragging: false };
+  card.classList.add('dragging');
+  ghost.style.left = (e.clientX - dragState_dd.offsetX) + 'px';
+  ghost.style.top = (e.clientY - dragState_dd.offsetY) + 'px';
+});
+
+document.addEventListener('pointermove', (e) => {
+  if (!dragState_dd) return;
+  if (!dragState_dd.isDragging) {
+    if (Math.hypot(e.clientX-dragState_dd.startX, e.clientY-dragState_dd.startY) < 5) return;
+    dragState_dd.isDragging = true;
+    dragState_dd.ghost.style.display = 'block';
+    if (state.lectureOrder.includes(dragState_dd.itemId)) {
+      document.querySelectorAll('.day-cell').forEach(cell => {
+        const d = parseDate(cell.dataset.date);
+        if (!isClassDay(d) || isSpringBreak(cell.dataset.date)) cell.classList.add('drag-invalid');
+      });
+    }
+  }
+  dragState_dd.ghost.style.left = (e.clientX - dragState_dd.offsetX) + 'px';
+  dragState_dd.ghost.style.top = (e.clientY - dragState_dd.offsetY) + 'px';
+
+  dragState_dd.ghost.style.display = 'none';
+  const el = document.elementFromPoint(e.clientX, e.clientY);
+  dragState_dd.ghost.style.display = 'block';
+  if (lastHighlighted) { lastHighlighted.classList.remove('drag-over'); lastHighlighted = null; }
+  const cell = el?.closest('.day-cell');
+  if (cell && isValidDrop(dragState_dd.itemId, cell.dataset.date)) { cell.classList.add('drag-over'); lastHighlighted = cell; }
+
+  const scrollEl = document.querySelector('.calendar-scroll');
+  if (scrollEl) {
+    const sr = scrollEl.getBoundingClientRect();
+    if (e.clientY < sr.top + 50) scrollEl.scrollTop -= 6;
+    else if (e.clientY > sr.bottom - 50) scrollEl.scrollTop += 6;
+  }
+});
+
+document.addEventListener('pointerup', (e) => {
+  if (!dragState_dd) return;
+  if (dragState_dd.isDragging) {
+    dragState_dd.ghost.style.display = 'none';
+    const el = document.elementFromPoint(e.clientX, e.clientY);
+    const cell = el?.closest('.day-cell');
+    let movedIds = [];
+    if (cell && isValidDrop(dragState_dd.itemId, cell.dataset.date)) {
+      movedIds = moveItem(dragState_dd.itemId, cell.dataset.date);
+    }
+    cleanupDrag(); render();
+    if (movedIds.length > 0) {
+      requestAnimationFrame(() => movedIds.forEach(id => {
+        const el = document.querySelector(`.item-card[data-id="${id}"]`);
+        if (el) el.classList.add('just-moved');
+      }));
+    }
+  } else { cleanupDrag(); }
+});
+
+// Hover highlight for dependencies
+document.addEventListener('mouseover', (e) => {
+  const card = e.target.closest('.item-card');
+  if (!card) return;
+  const id = parseInt(card.dataset.id);
+  // Highlight dependents
+  state.items.filter(i => i.parentId === id).forEach(dep => {
+    const el = document.querySelector(`.item-card[data-id="${dep.id}"]`);
+    if (el) el.classList.add('dep-highlight');
+  });
+  // Highlight parent
+  const item = state.items.find(i => i.id === id);
+  if (item?.parentId) {
+    const el = document.querySelector(`.item-card[data-id="${item.parentId}"]`);
+    if (el) el.classList.add('dep-highlight');
+  }
+});
+document.addEventListener('mouseout', (e) => {
+  const card = e.target.closest('.item-card');
+  if (!card) return;
+  document.querySelectorAll('.item-card.dep-highlight').forEach(el => el.classList.remove('dep-highlight'));
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') { if (dragState_dd) { cleanupDrag(); render(); } closeModal(); }
+  if (e.key === 'z' && (e.ctrlKey || e.metaKey) && !e.shiftKey) { e.preventDefault(); undo(); }
+});
+
+function cleanupDrag() {
+  if (!dragState_dd) return;
+  dragState_dd.ghost.remove();
+  document.querySelectorAll('.drag-over').forEach(c => c.classList.remove('drag-over'));
+  document.querySelectorAll('.drag-invalid').forEach(c => c.classList.remove('drag-invalid'));
+  document.querySelectorAll('.item-card.dragging').forEach(c => c.classList.remove('dragging'));
+  dragState_dd = null; lastHighlighted = null;
+}
+
+function isValidDrop(itemId, dateStr) {
+  const item = state.items.find(i => i.id === itemId);
+  if (!item) return false;
+  if (state.lectureOrder.includes(itemId)) {
+    const d = parseDate(dateStr);
+    if (!isClassDay(d) || isSpringBreak(dateStr)) return false;
+  }
+  return true;
+}
+
+// ======== EXPORT ========
+function exportSchedule() {
+  const sorted = [...state.items].sort((a,b) => a.date.localeCompare(b.date));
+  let csv = 'Date,Day,Type,Name,LinkedTo\n';
+  sorted.forEach(item => {
+    const d = parseDate(item.date);
+    const dn = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()];
+    const nm = item.name.replace(/"/g,'""');
+    const parent = item.parentId ? (state.items.find(p=>p.id===item.parentId)?.name||'').replace(/"/g,'""') : '';
+    csv += `${item.date},${dn},${item.type},"${nm}","${parent}"\n`;
+  });
+  const blob = new Blob([csv],{type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url;
+  a.download = `${CONFIG.courseName.replace(/\s+/g,'_')}_schedule.csv`;
+  a.click(); URL.revokeObjectURL(url);
+  showToast('Schedule exported as CSV');
+}
+
+// ======== INIT ========
+function init() {
+  const saved = loadState();
+  if (saved) {
+    state.items = saved.items; state.lectureOrder = saved.lectureOrder; state.nextId = saved.nextId || 200;
+  } else {
+    state.items = deepClone(INITIAL_ITEMS); state.lectureOrder = [...INITIAL_LECTURE_ORDER]; state.nextId = 200;
+  }
+  render();
+}
+init();
+</script>
+</body>
+</html>
